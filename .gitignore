@@ -1,0 +1,25 @@
+# Login credentials and local configuration
+cookie.txt
+config.json
+.env
+.env.*
+
+# Generated recordings, subtitles, and model downloads
+subtitles.db
+subtitles.db-*
+temp/
+models/
+
+# Python and editor files
+__pycache__/
+*.py[cod]
+.venv/
+.idea/
+.vscode/
+
+# Logs and local artifacts
+*.log
+*.png
+*.jpg
+*.jpeg
+*.zip

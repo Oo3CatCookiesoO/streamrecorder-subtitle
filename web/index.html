@@ -1,0 +1,3819 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamRecorder 字幕管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 260px;
+            background: #1a1a2e;
+            border-right: 1px solid #2a2a4a;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 12px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+        
+        .nav-section:last-child {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0;
+            overflow: hidden;
+        }
+        
+        #streamer-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 20px;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .nav-item-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #2a2a4a;
+        }
+
+        .nav-item-info {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .nav-item-name {
+            font-size: 13px;
+            color: #e0e0e0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .nav-item-id {
+            font-size: 10px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .nav-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .nav-item.active {
+            background: rgba(102, 126, 234, 0.15);
+            border-left: 3px solid #667eea;
+            padding-left: 17px;
+        }
+
+        .nav-item-icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .nav-item-count {
+            margin-left: auto;
+            background: #2a2a4a;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .nav-item-live {
+            margin-left: auto;
+            background: rgba(255, 70, 70, 0.2);
+            color: #ff6b6b;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* 主内容区 */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: #1a1a2e;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .main-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .main-stats {
+            display: flex;
+            gap: 20px;
+            margin-left: auto;
+        }
+
+        .stat-item {
+            text-align: right;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .search-box {
+            position: relative;
+            margin-left: 20px;
+        }
+
+        .search-input {
+            width: 300px;
+            padding: 10px 16px 10px 40px;
+            background: #2a2a4a;
+            border: 1px solid #3a3a5a;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            background: #252545;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            padding: 16px 24px;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #16162a;
+        }
+
+        .filter-btn {
+            padding: 6px 14px;
+            background: #2a2a4a;
+            border: 1px solid #3a3a5a;
+            border-radius: 6px;
+            color: #aaa;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #3a3a5a;
+            color: #fff;
+        }
+
+        .filter-btn.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .model-select {
+            margin-left: auto;
+            padding: 6px 12px;
+            background: #2a2a4a;
+            border: 1px solid #3a3a5a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* 内容区 */
+        .content {
+            position: relative;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+        
+        /* 字幕详情 */
+        .subtitle-detail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0f0f1e;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+        
+        .subtitle-detail .detail-header {
+            flex-shrink: 0;
+            background: #1a1a2e;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        
+        .subtitle-detail .detail-search-bar {
+            flex-shrink: 0;
+            background: #0f0f1e;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        
+        .subtitle-detail #detail-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px;
+            min-height: 0;
+            position: relative;
+        }
+        
+        /* 回到顶部按钮 */
+        .back-to-top {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #667eea;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 50;
+        }
+        
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .back-to-top:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+        }
+
+        /* 视频播放视图 */
+        .video-player-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0f0f1e;
+            display: flex;
+            z-index: 200;
+            overflow: hidden;
+        }
+        
+        .video-sidebar {
+            width: 380px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #2a2a4a;
+            background: #0f0f1e;
+        }
+        
+        .video-sidebar-header {
+            flex-shrink: 0;
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .video-sidebar-header h3 {
+            margin: 0;
+            font-size: 15px;
+            color: #fff;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .btn-locate {
+            background: #667eea;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .btn-watch {
+            padding: 6px 12px;
+            border: 1px solid #4ade80;
+            background: transparent;
+            color: #4ade80;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .btn-watch:hover {
+            background: rgba(74, 222, 128, 0.1);
+        }
+        .btn-watch.watched {
+            background: #4ade80;
+            color: #000;
+        }
+        .btn-watch.watched:hover {
+            background: #22c55e;
+        }
+        
+        .btn-locate:hover {
+            background: #5a6fd6;
+        }
+        
+        .btn-locate.active {
+            background: #48bb78;
+        }
+        
+        .video-sidebar-search {
+            flex-shrink: 0;
+            padding: 12px 20px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        
+        .video-sidebar-search .search-box {
+            margin: 0;
+        }
+        
+        .video-subtitle-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+            min-height: 0;
+        }
+        
+        .subtitle-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            display: flex;
+            gap: 12px;
+            transition: background 0.15s;
+            border-left: 3px solid transparent;
+        }
+        
+        .subtitle-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .subtitle-item.current {
+            background: rgba(102, 126, 234, 0.2);
+            border-left-color: #667eea;
+        }
+        
+        .subtitle-item.highlight {
+            background: rgba(72, 187, 120, 0.2);
+        }
+        
+        .subtitle-time {
+            color: #667eea;
+            font-size: 12px;
+            font-family: monospace;
+            flex-shrink: 0;
+            min-width: 50px;
+            padding-top: 2px;
+        }
+        
+        .subtitle-text {
+            color: #ccc;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .subtitle-item.current .subtitle-text {
+            color: #fff;
+        }
+        
+        .no-subtitle-hint {
+            text-align: center;
+            color: #666;
+            padding: 60px 20px;
+            font-size: 14px;
+        }
+        
+        .video-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a2e;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
+        .video-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1a1a2e;
+            position: relative;
+            padding: 16px;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
+        .video-container video {
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        
+        .video-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .video-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fc8181;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* 录播卡片网格 */
+        .recordings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .recording-card {
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+        }
+
+        .recording-card.watched {
+            border-color: #4ade80;
+            box-shadow: 0 0 0 1px #4ade80, 0 4px 12px rgba(74, 222, 128, 0.15);
+        }
+        .recording-card.watched::after {
+            content: "✓ 已看";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #4ade80;
+            color: #000;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        .recording-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-color: #667eea;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .recording-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            border-color: #667eea;
+        }
+
+        .recording-thumbnail {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            background: #0a0a1a;
+            overflow: hidden;
+        }
+
+        .recording-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .recording-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .recording-live-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: #ff4757;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .recording-live-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .recording-info {
+            padding: 14px;
+        }
+
+        .recording-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 40px;
+        }
+
+        .recording-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .recording-resolution {
+            background: rgba(57, 255, 7, 0.15);
+            color: #2ed573;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .recording-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #2a2a4a;
+            color: #aaa;
+            border: 1px solid #3a3a5a;
+        }
+
+        .btn-secondary:hover {
+            background: #3a3a5a;
+            color: #fff;
+        }
+
+        .btn-small {
+            padding: 5px 12px;
+            font-size: 14px;
+            white-space: nowrap;
+            font-family: KaiTi;
+        }
+
+        /* 搜索结果 */
+        .search-results {
+            display: none;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .search-result-item {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .search-result-item:hover {
+            border-color: #667eea;
+            background: #1f1f35;
+        }
+
+        .search-result-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #fff;
+        }
+
+        .search-result-meta {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .search-result-text {
+            font-size: 13px;
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        .search-result-text mark {
+            background: rgba(102, 126, 234, 0.3);
+            color: #fff;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        /* 搜索结果分组 */
+        .search-result-group {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .search-result-group.watched {
+            border-color: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.2);
+        }
+
+        .search-result-group:hover {
+            border-color: #667eea;
+            background: #1f1f35;
+        }
+
+        .search-result-group-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+
+        .search-result-group-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .search-result-group-meta {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .search-result-group-content {
+            padding: 8px 16px;
+        }
+
+        .search-result-segment {
+            padding: 8px 0;
+            border-bottom: 1px solid #252540;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .search-result-segment:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-time {
+            font-size: 12px;
+            color: #667eea;
+            flex-shrink: 0;
+            min-width: 50px;
+            font-family: monospace;
+        }
+
+        .search-result-more {
+            padding: 8px 0;
+            font-size: 12px;
+            color: #667eea;
+            text-align: center;
+        }
+
+        /* 字幕详情 */
+        .subtitle-segment {
+            padding: 12px 16px;
+            border-bottom: 1px solid #1f1f35;
+            transition: background 0.2s;
+        }
+
+        .subtitle-segment:hover {
+            background: #1f1f35;
+        }
+
+        .segment-time {
+            font-size: 12px;
+            color: #667eea;
+            margin-bottom: 4px;
+            font-family: monospace;
+        }
+
+        .segment-text {
+            font-size: 14px;
+            color: #ddd;
+            line-height: 1.6;
+        }
+
+        .segment-text mark {
+            background: rgba(102, 126, 234, 0.3);
+            color: #fff;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        .detail-header .btn {
+            flex-shrink: 0;
+        }
+
+        /* 分页 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px;
+            padding: 16px 0;
+        }
+
+        .page-btn {
+            padding: 8px 14px;
+            background: #2a2a4a;
+            border: 1px solid #3a3a5a;
+            border-radius: 6px;
+            color: #aaa;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: #3a3a5a;
+            color: #fff;
+        }
+
+        .page-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+            color: white;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 13px;
+            color: #888;
+            padding: 0 12px;
+        }
+
+        /* 录播卡片增强 */
+        .recording-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
+        .recording-meta-row:last-child {
+            margin-bottom: 12px;
+        }
+
+        .recording-date {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .recording-viewers {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #666;
+            font-size: 11px;
+        }
+
+        .recording-viewers i {
+            font-size: 10px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+        }
+
+        .empty-state-hint {
+            font-size: 12px;
+            margin-top: 8px;
+            color: #555;
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #2a2a4a;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 99999;
+            font-size: 14px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -10px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3a3a5a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4a6a;
+        }
+    
+        /* ===== 批量选择 ===== */
+        .batch-bar {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #1e1e3a 0%, #2a2a4a 100%);
+            border: 1px solid #667eea;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .batch-bar.active {
+            display: flex;
+        }
+        .batch-bar .batch-info {
+            color: #a0a0c0;
+            font-size: 14px;
+        }
+        .batch-bar .batch-info b {
+            color: #667eea;
+            font-size: 16px;
+        }
+        .batch-bar .batch-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .card-checkbox {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            border: 2px solid rgba(255,255,255,0.5);
+            background: rgba(0,0,0,0.5);
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+        .recording-card:hover .card-checkbox {
+            opacity: 1;
+        }
+        .card-checkbox.checked {
+            opacity: 1;
+            background: #667eea;
+            border-color: #667eea;
+        }
+        .card-checkbox.checked::after {
+            content: "✓";
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .recording-card.selected {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102,126,234,0.3);
+        }
+
+        /* ===== 任务队列面板 ===== */
+        .queue-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border-top: 1px solid #2a2a4a;
+            z-index: 300;
+            max-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        .queue-panel.open {
+            transform: translateY(0);
+        }
+        .queue-panel-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid #2a2a4a;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .queue-panel-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .queue-panel-count {
+            background: #667eea;
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        .queue-panel-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .queue-toggle-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            width: auto;
+            min-width: 70px;
+            height: 50px;
+            padding: 0 14px;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 299;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .queue-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+        .queue-toggle-btn.has-tasks {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+            50% { box-shadow: 0 4px 20px rgba(102,126,234,0.7); }
+        }
+        .queue-toggle-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ff4757;
+            color: #fff;
+            font-size: 11px;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+        .queue-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 20px;
+            min-height: 100px;
+            max-height: 50vh;
+        }
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #252540;
+        }
+        .queue-item:last-child {
+            border-bottom: none;
+        }
+        .queue-item-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid #444;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .queue-item-checkbox.checked {
+            background: #667eea;
+            border-color: #667eea;
+        }
+        .queue-item-checkbox.checked::after {
+            content: "✓";
+            color: #fff;
+            font-size: 12px;
+        }
+        .queue-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .queue-item-title {
+            font-size: 13px;
+            color: #ddd;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .queue-item-meta {
+            font-size: 11px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .queue-item-status {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .queue-item-status.waiting { background: rgba(102,126,234,0.2); color: #667eea; }
+        .queue-item-status.running { background: rgba(72,187,120,0.2); color: #48bb78; }
+        .queue-item-status.completed { background: rgba(72,187,120,0.2); color: #48bb78; }
+        .queue-item-status.failed { background: rgba(255,71,87,0.2); color: #ff4757; }
+        .queue-item-status.cancelled { background: rgba(136,136,136,0.2); color: #888; }
+        .queue-progress {
+            width: 100px;
+            height: 4px;
+            background: #2a2a4a;
+            border-radius: 2px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .queue-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        .queue-item-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .queue-item-btn {
+            background: none;
+            border: 1px solid #3a3a5a;
+            color: #aaa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .queue-item-btn:hover {
+            background: #2a2a4a;
+            color: #fff;
+        }
+        .queue-item-btn.danger:hover {
+            border-color: #ff4757;
+            color: #ff4757;
+        }
+        .queue-section-title {
+            font-size: 12px;
+            color: #666;
+            padding: 8px 0 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .queue-empty {
+            text-align: center;
+            color: #555;
+            padding: 30px;
+            font-size: 14px;
+        }
+        .select-all-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid #667eea;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .select-all-checkbox.checked {
+            background: #667eea;
+        }
+        .select-all-checkbox.checked::after {
+            content: "✓";
+            color: #fff;
+            font-size: 12px;
+        }
+
+    </style>
+    <script src="/static/hls.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">📝 字幕管理</div>
+                <div class="sidebar-subtitle">StreamRecorder Subtitle</div>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">导航</div>
+                    <div class="nav-item active" data-view="all">
+                        <span class="nav-item-icon">🎬</span>
+                        <span>全部录播</span>
+                        <span class="nav-item-count" id="total-count">0</span>
+                    </div>
+                    <div class="nav-item" data-view="live">
+                        <span class="nav-item-icon">🔴</span>
+                        <span>正在直播</span>
+                        <span class="nav-item-live" id="live-count">0</span>
+                    </div>
+                    <div class="nav-item" data-view="subtitled">
+                        <span class="nav-item-icon">✅</span>
+                        <span>已有字幕</span>
+                        <span class="nav-item-count" id="subtitle-count">0</span>
+                    </div>
+                    <div class="nav-item" data-view="unsubtitled">
+                        <span class="nav-item-icon">❌</span>
+                        <span>无字幕</span>
+                        <span class="nav-item-count" id="unsubtitled-count">0</span>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">主播</div>
+                    <div style="padding: 0 16px 8px;">
+                        <input type="text" id="streamer-search" placeholder="搜索主播..." 
+                               style="width: 100%; padding: 6px 10px; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 6px; color: #fff; font-size: 12px; outline: none;">
+                    </div>
+                    <div id="streamer-list">
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main">
+            <div class="main-header">
+                <div class="main-title" id="current-title">全部录播</div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="search-input" placeholder="搜索字幕内容...">
+                </div>
+                <div class="main-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">总录播</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-subtitles">0</div>
+                        <div class="stat-label">字幕数</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="subtitled">有字幕</button>
+                <button class="filter-btn" data-filter="unsubtitled">无字幕</button>
+                <select class="model-select" id="model-select">
+                    <option value="paraformer-large">Paraformer Large</option>
+                    <option value="paraformer-zh">Paraformer Zh</option>
+                    <option value="qwen3-asr-0.6b">Qwen3-ASR-0.6B</option>
+                </select>
+            </div>
+
+            <div class="content">
+                <!-- 录播列表 -->
+                <div class="recordings-view" id="recordings-view">
+                <!-- 批量操作栏 -->
+                <div class="batch-bar" id="batch-bar">
+                    <div class="select-all-checkbox" id="select-all-cb" onclick="toggleSelectAll()"></div>
+                    <span class="batch-info">已选择 <b id="selected-count">0</b> 个录播</span>
+                    <div class="batch-actions">
+                        <button class="btn btn-primary btn-small" onclick="batchGenerate()">🎙 批量生成字幕</button>
+                        <button class="btn btn-danger btn-small" onclick="batchDelete()">🗑 批量删除字幕</button>
+                        <button class="btn btn-small" style="background:#333;color:#ccc;" onclick="clearSelection()">取消选择</button>
+                    </div>
+                </div>
+                    <div class="recordings-grid" id="recordings-grid">
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 搜索结果 -->
+                <div class="search-results" id="search-results">
+                    <!-- 动态加载 -->
+                </div>
+
+                <!-- 字幕详情 -->
+                <div class="subtitle-detail" id="subtitle-detail" style="display: none;">
+                    <div class="detail-header" style="padding: 16px 24px; border-bottom: 1px solid #2a2a4a; display: flex; align-items: center; gap: 16px;">
+                        <button class="btn btn-secondary btn-small" onclick="backToList()">← 返回</button>
+                        <img id="detail-avatar" src="" alt="" style="width: 48px; height: 48px; border-radius: 50%; display: none;" onerror="this.style.display='none'">
+                        <div style="flex: 1; min-width: 0;">
+                            <h3 id="detail-title" style="margin: 0; font-size: 16px; color: #fff;">字幕详情</h3>
+                            <div id="detail-meta" style="font-size: 12px; color: #888; margin-top: 4px;"></div>
+                        </div>
+                        <button class="btn btn-success btn-small" id="detail-download-btn">⬇ 下载 SRT</button>
+                    </div>
+                    <div class="detail-search-bar" style="padding: 16px 24px; border-bottom: 1px solid #2a2a4a; flex-shrink: 0;">
+                        <div class="search-box" style="margin: 0; max-width: 400px;">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" class="search-input" id="detail-search" placeholder="搜索当前字幕内容..." style="width: 100%;">
+                        </div>
+                    </div>
+                    <div id="detail-content" style="padding: 16px 24px;">
+                        <button class="back-to-top" id="back-to-top" onclick="scrollToTop()" title="回到顶部">↑</button>
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 视频播放视图 -->
+                <div class="video-player-view" id="video-player-view" style="display: none;">
+                    <div class="video-sidebar">
+                        <div class="video-sidebar-header">
+                            <button class="btn btn-secondary btn-small" onclick="closeVideoPlayer()">← 返回</button>
+                            <h3 id="video-title">字幕列表</h3>
+                            <button class="btn-locate" id="btn-locate" onclick="toggleAutoLocate()">定位到当前字幕</button>
+            <button class="btn-watch" id="btn-watch" onclick="toggleWatch()">☆ 标记已看</button>
+                        </div>
+                        <div class="video-sidebar-search">
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" class="search-input" id="video-subtitle-search" placeholder="搜索字幕内容...">
+                            </div>
+                        </div>
+                        <div class="video-subtitle-list" id="video-subtitle-list">
+                            <!-- 动态加载 -->
+                        </div>
+                    </div>
+                    <div class="video-main">
+                        <div class="video-container">
+                            <video id="video-player" controls></video>
+                            <div class="video-loading" id="video-loading" style="display: none;">加载中...</div>
+                            <div class="video-error" id="video-error" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        const PAGE_SIZE = 20;
+        let currentView = 'all';
+        let currentStreamer = null;
+        let currentFilter = 'all';
+        let currentPage = 1;
+        let totalPages = 1;
+        let totalCount = 0;
+        let recordings = [];
+        let subtitles = [];
+        let streamers = [];
+        let streamerSearchKeyword = '';
+        
+        // 搜索相关
+        let allSearchResults = [];
+        let currentSearchStreamer = null;
+        let searchOnlyUnwatched = false;
+        let collapsedStreamers = {};
+        let currentSearchKeyword = ''; // 当前搜索关键词
+        let savedScrollTop = 0; // 保存搜索结果的滚动位置 // 折叠的主播 {streamer: true}
+        let searchStreamerDropdownOpen = false;
+
+        // 初始化
+        async function init() {
+            await loadData();
+            setupEventListeners();
+            
+            // 检查 URL 参数，自动定位到指定主播
+            const urlParams = new URLSearchParams(window.location.search);
+            const streamerParam = urlParams.get('streamer');
+            if (streamerParam) {
+                // 找到对应的主播项并点击
+                setTimeout(() => {
+                    const streamerItem = document.querySelector(`.nav-item[data-streamer="${CSS.escape(streamerParam)}"]`);
+                    if (streamerItem) {
+                        streamerItem.click();
+                    }
+                }, 100);
+            }
+        }
+
+        // 加载数据
+        async function loadSubtitles() {
+            try {
+                const res = await fetch(API_BASE + '/subtitles');
+                subtitles = await res.json();
+                renderAll();
+            } catch(e) {
+                console.error('加载字幕失败', e);
+            }
+        }
+
+        async function loadData() {
+            try {
+                // 加载第一页录播
+                await loadRecordingsPage(1);
+
+                // 加载字幕列表
+                const subRes = await fetch(API_BASE + '/subtitles');
+                subtitles = await subRes.json();
+
+                // 加载主播列表
+                const strRes = await fetch(API_BASE + '/recordings/streamers');
+                streamers = await strRes.json();
+
+                renderAll();
+            } catch (err) {
+                console.error('加载数据失败:', err);
+                showToast('加载数据失败，请确认后端服务已启动');
+            }
+        }
+
+        // 加载指定页的录播
+        async function loadRecordingsPage(page) {
+            try {
+                let url = API_BASE + `/recordings?page=${page}&page_size=${PAGE_SIZE}`;
+                
+                if (currentView === 'live') {
+                    url += '&is_live=true';
+                } else {
+                    url += '&is_live=false';
+                    if (currentView === 'streamer' && currentStreamer) {
+                        url += `&streamer=${encodeURIComponent(currentStreamer)}`;
+                    }
+                }
+
+                // 字幕筛选
+                if (currentFilter === 'subtitled') {
+                    url += '&is_subtitled=true';
+                } else if (currentFilter === 'unsubtitled') {
+                    url += '&is_subtitled=false';
+                }
+
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                recordings = data.items || [];
+                totalCount = data.total || 0;
+                totalPages = data.total_pages || 1;
+                currentPage = data.page || page;
+
+                return data;
+            } catch (err) {
+                console.error('加载录播失败:', err);
+                throw err;
+            }
+        }
+
+        // 渲染所有内容
+        function renderAll() {
+            renderStreamers();
+            renderRecordings();
+            updateStats();
+        }
+
+        // 渲染主播列表
+        function renderStreamers() {
+            const container = document.getElementById('streamer-list');
+            
+            if (streamers.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 12px 20px; font-size: 12px; color: #666;">
+                        暂无数据
+                    </div>
+                `;
+                return;
+            }
+
+            // 搜索过滤
+            const keyword = streamerSearchKeyword.toLowerCase().trim();
+            const filtered = keyword 
+                ? streamers.filter(s => {
+                    const name = (s.streamer_name || '').toLowerCase();
+                    const id = (s.streamer || '').toLowerCase();
+                    return name.includes(keyword) || id.includes(keyword);
+                })
+                : streamers;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 12px 20px; font-size: 12px; color: #666;">
+                        未找到匹配的主播
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(s => {
+                const displayName = s.streamer_name || s.streamer;
+                return `
+                <div class="nav-item ${currentStreamer === s.streamer ? 'active' : ''}" 
+                     data-streamer="${s.streamer}" data-platform="${s.platform}">
+                    ${s.streamer_avatar 
+                        ? `<img src="${s.streamer_avatar}" class="nav-item-avatar" alt="" onerror="this.style.display='none'">`
+                        : `<span class="nav-item-icon">👤</span>`
+                    }
+                    <div class="nav-item-info">
+                        <div class="nav-item-name">${escapeHtml(displayName)}</div>
+                        ${s.streamer_name ? `<div class="nav-item-id">${escapeHtml(s.streamer)}</div>` : ''}
+                    </div>
+                    <span class="nav-item-count">${s.count}</span>
+                    ${s.live_count > 0 ? `<span class="nav-item-live">${s.live_count}</span>` : ''}
+                </div>
+            `}).join('');
+
+            // 绑定点击事件
+            container.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    // 关闭字幕详情页
+                    document.getElementById('subtitle-detail').style.display = 'none';
+                    document.getElementById('recordings-view').style.display = 'block';
+                    document.getElementById('search-results').classList.remove('active');
+                    
+                    currentStreamer = item.dataset.streamer;
+                    currentView = 'streamer';
+                    currentPage = 1;
+                    currentFilter = 'all';
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    document.getElementById('current-title').textContent = currentStreamer;
+                    
+                    // 重置筛选按钮状态
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelector('.filter-btn[data-filter="all"]')?.classList.add('active');
+                    
+                    // 显示工具栏
+                    const toolbar = document.querySelector('.toolbar');
+                    if (toolbar) toolbar.style.display = 'flex';
+                    
+                    // 更新搜索框提示
+                    const streamerInfo = streamers.find(s => s.streamer === currentStreamer);
+                    const streamerName = streamerInfo?.streamer_name || currentStreamer;
+                    document.getElementById('search-input').placeholder = `搜索「${streamerName}」的字幕...`;
+                    
+                    try {
+                        await loadRecordingsPage(1);
+                        renderRecordings();
+                    } catch (err) {
+                        showToast('加载失败: ' + err.message);
+                    }
+                });
+            });
+        }
+
+        // 渲染录播列表
+        function renderRecordings() {
+            const grid = document.getElementById('recordings-grid');
+            document.getElementById('recordings-view').style.display = 'block';
+            document.getElementById('search-results').classList.remove('active');
+
+            let filtered = [...recordings];
+
+            // 按筛选条件过滤（前端过滤字幕状态）
+            if (currentFilter === 'subtitled') {
+                filtered = filtered.filter(r => 
+                    subtitles.some(s => String(s.recording_id) === String(r.recording_id))
+                );
+            } else if (currentFilter === 'unsubtitled') {
+                filtered = filtered.filter(r => 
+                    !subtitles.some(s => String(s.recording_id) === String(r.recording_id))
+                );
+            }
+
+            if (filtered.length === 0 && currentPage === 1) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">暂无录播</div>
+                        <div class="empty-state-hint">请在 StreamRecorder 页面点击油猴脚本的同步按钮</div>
+                    </div>
+                `;
+                renderPagination();
+                return;
+            }
+
+            grid.innerHTML = filtered.map(rec => {
+                const hasSubtitle = subtitles.some(s => 
+                    String(s.recording_id) === String(rec.recording_id)
+                );
+
+                // 格式化日期时间（网站返回的是 UTC 时间，需要转换成北京时间）
+                let dateTimeStr = '';
+                if (rec.record_time) {
+                    // 把时间字符串当成 UTC 时间解析
+                    let timeStr = rec.record_time;
+                    if (timeStr && !timeStr.endsWith('Z')) {
+                        // 统一成 ISO 格式并加上 Z 表示 UTC
+                        timeStr = timeStr.replace(' ', 'T') + 'Z';
+                    }
+                    const dt = new Date(timeStr);
+                    const year = dt.getFullYear();
+                    const month = String(dt.getMonth() + 1).padStart(2, '0');
+                    const day = String(dt.getDate()).padStart(2, '0');
+                    const hours = String(dt.getHours()).padStart(2, '0');
+                    const minutes = String(dt.getMinutes()).padStart(2, '0');
+                    const seconds = String(dt.getSeconds()).padStart(2, '0');
+                    dateTimeStr = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+                }
+
+                return `
+                    <div class="recording-card ${selectedIds.has(rec.id) ? 'selected' : ''} ${rec.is_watched ? 'watched' : ''}" data-id="${rec.id}" onclick="openVideoPlayer(${rec.recording_id || rec.id})" style="cursor: pointer;">
+                        <div class="recording-thumbnail">
+                            <div class="card-checkbox ${selectedIds.has(rec.id) ? 'checked' : ''}" onclick="event.stopPropagation(); toggleSelect(${rec.id})"></div>
+                            ${rec.thumbnail_url ? `<img src="${rec.thumbnail_url}" alt="" onerror="this.style.display='none'">` : ''}
+                            <div class="recording-duration">${formatDuration(rec.duration)}</div>
+                            ${rec.is_live ? '<div class="recording-live-badge">LIVE</div>' : ''}
+                        </div>
+                        <div class="recording-info">
+                            <div class="recording-title">${escapeHtml(rec.title)}</div>
+                            <div class="recording-meta-row">
+                                ${rec.resolution ? `<span class="recording-resolution">${rec.resolution}</span>` : ''}
+                                <span style="font-size: 11px; color: #666;">📅 ${dateTimeStr}</span>
+                            </div>
+                            ${rec.avg_viewers ? `
+                            <div class="recording-meta-row">
+                                <span class="recording-viewers">
+                                    👥 平均 ${rec.avg_viewers} / 峰值 ${rec.max_viewers}
+                                </span>
+                            </div>
+                            ` : ''}
+                            <div class="recording-actions">
+                                ${rec.is_live ? `
+                                    <span class="btn btn-disabled btn-small" style="background: #dc3545; color: white; cursor: default;">
+                                        🔴 直播中
+                                    </span>
+                                ` : hasSubtitle ? `
+                                    <div style="display: flex; gap: 6px; width: 100%;">
+                                        <button class="btn btn-success btn-small" style="flex: 1; white-space: nowrap;" onclick="viewSubtitleByRecordingId('${rec.recording_id}')">
+                                            👁 查看
+                                        </button>
+                                        <button class="btn btn-danger btn-small" style="flex: 1; white-space: nowrap;" onclick="deleteSubtitleByRecordingId('${rec.recording_id}', ${rec.id})">
+                                            🗑 删除
+                                        </button>
+                                    </div>
+                                ` : (() => {
+                                    const qStatus = getRecQueueStatus(rec);
+                                    if (qStatus === "running") {
+                                        return `<button class="btn btn-small" style="background:#f0ad4e;color:#fff;cursor:default;" disabled>
+                                            ⏳ 生成中...
+                                        </button>`;
+                                    }
+                                    if (qStatus === "waiting") {
+                                        return `<button class="btn btn-small" style="background:#6c757d;color:#fff;cursor:default;" disabled>
+                                            📋 排队中
+                                        </button>`;
+                                    }
+                                    return `<button class="btn btn-primary btn-small" onclick="event.stopPropagation(); generateSubtitle(${rec.id})">
+                                        🎙 生成字幕
+                                    </button>`;
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            renderPagination();
+        }
+
+        // 渲染分页控件
+        function renderPagination() {
+            // 先移除旧的分页
+            const oldPagination = document.querySelector('.pagination');
+            if (oldPagination) {
+                oldPagination.remove();
+            }
+
+            if (totalPages <= 1) return;
+
+            const content = document.querySelector('.content');
+            const pagination = document.createElement('div');
+            pagination.className = 'pagination';
+
+            let pagesHtml = '';
+            
+            // 上一页
+            pagesHtml += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>‹</button>`;
+
+            // 页码按钮
+            const maxVisible = 7;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+            
+            if (endPage - startPage < maxVisible - 1) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            if (startPage > 1) {
+                pagesHtml += `<button class="page-btn" onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) {
+                    pagesHtml += `<span class="page-info">...</span>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagesHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    pagesHtml += `<span class="page-info">...</span>`;
+                }
+                pagesHtml += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+
+            // 下一页
+            pagesHtml += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>›</button>`;
+
+            // 页码信息
+            pagesHtml += `<span class="page-info">${totalCount} 条</span>`;
+
+            pagination.innerHTML = pagesHtml;
+            content.appendChild(pagination);
+        }
+
+        // 跳转到指定页
+        async function goToPage(page) {
+            if (page < 1 || page > totalPages || page === currentPage) return;
+            
+            try {
+                await loadRecordingsPage(page);
+                renderRecordings();
+                // 滚动到顶部
+                document.querySelector('.content').scrollTop = 0;
+            } catch (err) {
+                showToast('加载失败: ' + err.message);
+            }
+        }
+
+        // 生成字幕
+
+        // 轮询任务状态
+        function pollTask(taskId, recordingId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(API_BASE + '/task/' + taskId);
+                    const task = await res.json();
+
+                    const btn = document.querySelector(`.recording-card[data-id="${recordingId}"] .btn-primary`);
+
+                    if (task.status === 'completed') {
+                        clearInterval(interval);
+                        showToast('字幕生成完成！');
+                        // 重新加载字幕列表
+                        const subRes = await fetch(API_BASE + '/subtitles');
+                        subtitles = await subRes.json();
+                        // 重新渲染当前页，不跳转
+                        renderRecordings();
+                        // 更新统计数字
+                        updateStats();
+                    } else if (task.status === 'failed') {
+                        clearInterval(interval);
+                        showToast('生成失败: ' + task.error);
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = '🎙 生成字幕';
+                        }
+                    } else if (task.status === 'running') {
+                        if (btn) {
+                            btn.textContent = `${task.progress || 0}%`;
+                        }
+                    }
+                } catch (err) {
+                    console.error('查询任务状态失败:', err);
+                }
+            }, 3000);
+        }
+
+        // 下载字幕
+        async function downloadSubtitle(title, streamer) {
+            const sub = subtitles.find(s => s.title === title && s.streamer === streamer);
+            if (sub) {
+                window.open(API_BASE + '/subtitle/' + sub.id + '/srt');
+            }
+        }
+
+        // 查看字幕详情
+        let currentSubtitle = null;
+        let previousView = "list"; // 记住进入字幕详情前的视图: list 或 search
+        let currentSegments = [];
+
+        async function viewSubtitle(subtitleId) {
+            try {
+                const res = await fetch(API_BASE + '/subtitle/' + subtitleId);
+                const data = await res.json();
+                currentSubtitle = data;
+                currentSegments = data.segments || [];
+
+            // 记住之前的视图
+            previousView = document.getElementById("search-results").classList.contains("active") ? "search" : "list";
+            
+                // 显示详情页
+                document.getElementById('recordings-view').style.display = 'none';
+                document.getElementById('search-results').classList.remove('active');
+                document.getElementById('subtitle-detail').style.display = 'flex';
+
+                // 填充标题和元信息
+                
+                // 主播头像
+                const avatarEl = document.getElementById('detail-avatar');
+                if (data.streamer_avatar) {
+                    avatarEl.src = data.streamer_avatar;
+                    avatarEl.style.display = 'block';
+                } else {
+                    avatarEl.style.display = 'none';
+                }
+                
+                // 格式化录播时间
+                let recordTimeStr = '';
+                if (data.record_time) {
+                    let timeStr = data.record_time;
+                    if (timeStr && !timeStr.endsWith('Z')) {
+                        timeStr = timeStr.replace(' ', 'T') + 'Z';
+                    }
+                    const dt = new Date(timeStr);
+                    const year = dt.getFullYear();
+                    const month = String(dt.getMonth() + 1).padStart(2, '0');
+                    const day = String(dt.getDate()).padStart(2, '0');
+                    const hours = String(dt.getHours()).padStart(2, '0');
+                    const minutes = String(dt.getMinutes()).padStart(2, '0');
+                    const seconds = String(dt.getSeconds()).padStart(2, '0');
+                    recordTimeStr = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+                }
+                
+                const duration = formatDuration(data.duration || 0);
+                const model = data.model || 'unknown';
+                const streamerDisplay = data.streamer_name || data.streamer || 'unknown';
+                
+                // 填充标题和元信息
+                document.getElementById('detail-title').textContent = streamerDisplay;
+                
+                let metaText = '';
+                if (data.title) {
+                    metaText += data.title;
+                }
+                if (recordTimeStr) {
+                    if (metaText) metaText += ' | ';
+                    metaText += `时间: ${recordTimeStr}`;
+                }
+                if (metaText) metaText += ' | ';
+                metaText += `时长: ${duration} | 模型: ${model} | 共 ${data.segments?.length || 0} 句`;
+                
+                document.getElementById('detail-meta').textContent = metaText;
+
+                // 下载按钮
+                document.getElementById('detail-download-btn').onclick = () => {
+                    window.open(API_BASE + '/subtitle/' + subtitleId + '/srt', '_blank');
+                };
+
+                // 清空搜索框
+                document.getElementById('detail-search').value = '';
+
+                // 渲染字幕内容
+                renderSubtitleSegments(currentSegments);
+
+                // 滚动到顶部
+                document.getElementById('detail-content').scrollTop = 0;
+                
+                // 添加滚动监听，显示/隐藏回到顶部按钮
+                const detailContent = document.getElementById("detail-content");
+                const backToTopBtn = document.getElementById("back-to-top");
+                detailContent.onscroll = () => {
+                    if (detailContent.scrollTop > 300) {
+                        backToTopBtn.classList.add("visible");
+                    } else {
+                        backToTopBtn.classList.remove("visible");
+                    }
+                };
+            } catch (err) {
+                console.error('加载字幕详情失败:', err);
+                showToast('加载失败: ' + err.message);
+            }
+        }
+
+        // 渲染字幕片段
+        function renderSubtitleSegments(segments, keyword = '') {
+            const container = document.getElementById('detail-content');
+            
+            if (segments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">暂无字幕内容</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = segments.map(seg => {
+                const startTime = formatTime(seg.start);
+                const endTime = formatTime(seg.end);
+                let text = escapeHtml(seg.text);
+                
+                if (keyword) {
+                    const regex = new RegExp(`(${escapeRegex(keyword)})`, 'gi');
+                    text = text.replace(regex, '<mark>$1</mark>');
+                }
+
+                return `
+                    <div class="subtitle-segment">
+                        <div class="segment-time">${startTime} --> ${endTime}</div>
+                        <div class="segment-text">${text}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 返回列表
+        // 回到顶部
+        function scrollToTop() {
+            const detailContent = document.getElementById("detail-content");
+            detailContent.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        // ==================== 视频播放功能 ====================
+        let hls = null;
+        let currentVideoRecordingId = null;
+        let currentVideoSegments = [];
+        let currentSubtitleIndex = -1;
+        let autoLocate = true;
+        let userScrolledSubtitle = false;
+
+        // 格式化时间为 HH:MM:SS
+        function formatVideoTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) {
+                return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+            return `${m}:${String(s).padStart(2, '0')}`;
+        }
+
+        // 打开视频播放器
+        async function openVideoPlayer(recordingId) {
+            currentVideoRecordingId = recordingId;
+            currentVideoSegments = [];
+            currentSubtitleIndex = -1;
+            autoLocate = true;
+            userScrolledSubtitle = false;
+
+            // 从 recordings 数组查找标题
+            const rec = recordings.find(r => String(r.recording_id) === String(recordingId) || r.id === recordingId);
+            const title = rec ? rec.title : '视频播放';
+
+            // 记住之前的视图
+            previousView = document.getElementById("search-results").classList.contains("active") ? "search" : "list";
+
+            // 隐藏其他视图，显示视频播放视图
+            document.getElementById('recordings-view').style.display = 'none';
+                savedScrollTop = document.querySelector('.content').scrollTop;
+            document.getElementById('search-results').classList.remove('active');
+            document.getElementById('subtitle-detail').style.display = 'none';
+            // 保存当前滚动位置
+                document.getElementById('video-player-view').style.display = 'flex';
+
+            // 设置标题
+            document.getElementById('video-title').textContent = title;
+
+            // 设置已看按钮状态
+            const watchBtn = document.getElementById('btn-watch');
+            let isWatched = false;
+            const recForWatch = recordings.find(r => String(r.recording_id) === String(recordingId));
+            if (recForWatch && recForWatch.is_watched) {
+                isWatched = true;
+            } else {
+                // 从搜索结果里找
+                const searchItem = allSearchResults.find(item => String(item.recording_id) === String(recordingId));
+                if (searchItem && searchItem.is_watched) {
+                    isWatched = true;
+                }
+            }
+            if (isWatched) {
+                watchBtn.classList.add('watched');
+                watchBtn.textContent = '★ 已看';
+            } else {
+                watchBtn.classList.remove('watched');
+                watchBtn.textContent = '☆ 标记已看';
+            }
+
+            // 清空字幕列表
+            document.getElementById('video-subtitle-list').innerHTML = '<div class="no-subtitle-hint">加载中...</div>';
+
+            // 初始化视频
+            initVideo(recordingId);
+
+            // 加载字幕
+            await loadVideoSubtitles(recordingId);
+
+            // 绑定搜索事件
+            const searchInput = document.getElementById('video-subtitle-search');
+            searchInput.value = '';
+            searchInput.oninput = () => filterVideoSubtitles(searchInput.value);
+
+            // 更新定位按钮状态
+            updateLocateButton();
+        }
+
+        // 初始化视频播放
+        function initVideo(recordingId) {
+            const video = document.getElementById('video-player');
+            const loading = document.getElementById('video-loading');
+            const errorEl = document.getElementById('video-error');
+
+            loading.style.display = 'block';
+            errorEl.style.display = 'none';
+
+            // 销毁之前的 hls 实例
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+
+            // m3u8 原始地址
+            const m3u8Url = `https://streamrecorder.io/recordings/hls/${recordingId}/master.m3u8`;
+
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    xhrSetup: (xhr, url) => {
+                        // 所有请求都通过后端代理（包括 m3u8 和视频分片）
+                        xhr.open('GET', `/api/video/proxy?url=${encodeURIComponent(url)}`, true);
+                    },
+                    enableWorker: true,
+                    lowLatencyMode: false,
+                });
+
+                hls.loadSource(m3u8Url);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    loading.style.display = 'none';
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS 错误:', data);
+                    if (data.fatal) {
+                        loading.style.display = 'none';
+                        errorEl.style.display = 'block';
+                        errorEl.textContent = '视频加载失败: ' + (data.details || data.type);
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Safari 原生支持
+                video.src = `/api/video/proxy?url=${encodeURIComponent(m3u8Url)}`;
+                video.addEventListener('loadedmetadata', () => {
+                    loading.style.display = 'none';
+                });
+            } else {
+                loading.style.display = 'none';
+                errorEl.style.display = 'block';
+                errorEl.textContent = '您的浏览器不支持 HLS 播放';
+            }
+
+            // 视频时间更新事件
+            video.ontimeupdate = () => {
+                updateCurrentSubtitle(video.currentTime);
+            };
+        }
+
+        // 加载视频对应的字幕
+        async function loadVideoSubtitles(recordingId) {
+            try {
+                // 先查找这个录播对应的字幕
+                const subtitle = subtitles.find(s => String(s.recording_id) === String(recordingId));
+                
+                if (!subtitle) {
+                    document.getElementById('video-subtitle-list').innerHTML = 
+                        '<div class="no-subtitle-hint">当前无字幕<br><br>您可以在录播列表中点击"生成字幕"按钮来生成字幕</div>';
+                    return;
+                }
+
+                // 获取字幕详情
+                const res = await fetch(API_BASE + '/subtitle/' + subtitle.id);
+                const data = await res.json();
+                currentVideoSegments = data.segments || [];
+
+                if (currentVideoSegments.length === 0) {
+                    document.getElementById('video-subtitle-list').innerHTML = 
+                        '<div class="no-subtitle-hint">当前无字幕</div>';
+                    return;
+                }
+
+                renderVideoSubtitles(currentVideoSegments);
+            } catch (err) {
+                console.error('加载字幕失败:', err);
+                document.getElementById('video-subtitle-list').innerHTML = 
+                    '<div class="no-subtitle-hint">字幕加载失败</div>';
+            }
+        }
+
+        // 渲染字幕列表
+        function renderVideoSubtitles(segments) {
+            const container = document.getElementById('video-subtitle-list');
+            container.innerHTML = '';
+
+            segments.forEach((seg, idx) => {
+                const item = document.createElement('div');
+                item.className = 'subtitle-item';
+                item.dataset.index = idx;
+                item.dataset.start = seg.start;
+                item.dataset.end = seg.end;
+                item.onclick = () => seekToSubtitle(idx);
+
+                const time = document.createElement('span');
+                time.className = 'subtitle-time';
+                time.textContent = formatVideoTime(seg.start);
+
+                const text = document.createElement('span');
+                text.className = 'subtitle-text';
+                text.textContent = seg.text;
+
+                item.appendChild(time);
+                item.appendChild(text);
+                container.appendChild(item);
+            });
+        }
+
+        // 点击字幕，跳转到对应时间
+        function seekToSubtitle(idx) {
+            const seg = currentVideoSegments[idx];
+            if (!seg) return;
+
+            const video = document.getElementById('video-player');
+            video.currentTime = seg.start;
+            
+            // 高亮当前字幕
+            highlightSubtitle(idx);
+            
+            // 用户手动点击了，暂时不自动定位
+            userScrolledSubtitle = true;
+            setTimeout(() => {
+                userScrolledSubtitle = false;
+            }, 3000);
+        }
+
+        // 根据视频当前时间更新字幕高亮
+        function updateCurrentSubtitle(currentTime) {
+            if (currentVideoSegments.length === 0) return;
+
+            // 找到当前时间对应的字幕
+            let newIndex = -1;
+            for (let i = 0; i < currentVideoSegments.length; i++) {
+                const seg = currentVideoSegments[i];
+                if (currentTime >= seg.start && currentTime < seg.end) {
+                    newIndex = i;
+                    break;
+                }
+                // 如果当前时间在字幕之间，取最近的一个
+                if (currentTime < seg.start) {
+                    newIndex = i > 0 ? i - 1 : 0;
+                    break;
+                }
+            }
+
+            // 如果到了最后
+            if (newIndex === -1 && currentTime >= currentVideoSegments[currentVideoSegments.length - 1].start) {
+                newIndex = currentVideoSegments.length - 1;
+            }
+
+            if (newIndex !== currentSubtitleIndex && newIndex >= 0) {
+                highlightSubtitle(newIndex);
+                
+                // 如果开启了自动定位，滚动到当前字幕
+                if (autoLocate && !userScrolledSubtitle) {
+                    scrollToSubtitle(newIndex);
+                }
+            }
+        }
+
+        // 高亮指定字幕
+        function highlightSubtitle(idx) {
+            // 移除之前的高亮
+            document.querySelectorAll('.subtitle-item.current').forEach(el => {
+                el.classList.remove('current');
+            });
+
+            const items = document.querySelectorAll('.subtitle-item');
+            if (items[idx]) {
+                items[idx].classList.add('current');
+                currentSubtitleIndex = idx;
+            }
+        }
+
+        // 滚动到指定字幕
+        function scrollToSubtitle(idx) {
+            const items = document.querySelectorAll('.subtitle-item');
+            if (!items[idx]) return;
+
+            const container = document.getElementById('video-subtitle-list');
+            const item = items[idx];
+            
+            // 计算滚动位置，让当前字幕在中间
+            const containerHeight = container.clientHeight;
+            const itemTop = item.offsetTop;
+            const itemHeight = item.offsetHeight;
+            const scrollTop = itemTop - containerHeight / 2 + itemHeight / 2;
+            
+            container.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }
+
+        // 切换自动定位
+        function toggleAutoLocate() {
+            autoLocate = !autoLocate;
+            updateLocateButton();
+            
+            if (autoLocate && currentSubtitleIndex >= 0) {
+                scrollToSubtitle(currentSubtitleIndex);
+            }
+        }
+
+        // 更新定位按钮状态
+        function updateLocateButton() {
+            const btn = document.getElementById('btn-locate');
+            if (autoLocate) {
+                btn.classList.add('active');
+                btn.textContent = '自动定位中';
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '定位到当前字幕';
+            }
+        }
+
+        // 过滤字幕
+        function filterVideoSubtitles(keyword) {
+            const items = document.querySelectorAll('.subtitle-item');
+            keyword = keyword.trim();
+
+            if (!keyword) {
+                items.forEach(item => {
+                    item.style.display = 'flex';
+                    // 恢复原始文本
+                    const textEl = item.querySelector('.subtitle-text');
+                    if (textEl && textEl.dataset.original) {
+                        textEl.innerHTML = textEl.dataset.original;
+                    }
+                });
+                return;
+            }
+
+            const lowerKeyword = keyword.toLowerCase();
+            items.forEach(item => {
+                const textEl = item.querySelector('.subtitle-text');
+                const originalText = textEl.dataset.original || textEl.textContent;
+                if (!textEl.dataset.original) {
+                    textEl.dataset.original = originalText;
+                }
+                const lowerText = originalText.toLowerCase();
+                if (lowerText.includes(lowerKeyword)) {
+                    item.style.display = 'flex';
+                    // 高亮关键词
+                    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(${escaped})`, 'gi');
+                    textEl.innerHTML = originalText.replace(regex, '<mark style="background: rgba(102,126,234,0.4); color: #fff; padding: 0 2px; border-radius: 2px;">$1</mark>');
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // 关闭视频播放器
+        function closeVideoPlayer() {
+            // 暂停视频
+            const video = document.getElementById('video-player');
+            video.pause();
+            
+            // 销毁 hls
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+
+            // 隐藏视频视图和其他视图
+            document.getElementById('video-player-view').style.display = 'none';
+            document.getElementById('subtitle-detail').style.display = 'none';
+            
+            // 根据之前的视图返回
+            if (previousView === "search") {
+                // 回到搜索结果页面
+                document.getElementById('search-results').classList.add('active');
+                document.getElementById('recordings-view').style.display = 'none';
+                // 恢复滚动位置
+                setTimeout(() => {
+                    document.querySelector('.content').scrollTop = savedScrollTop;
+                }, 10);
+            } else {
+                // 回到录播列表
+                document.getElementById('recordings-view').style.display = 'block';
+                document.getElementById('search-results').classList.remove('active');
+                // 刷新录播列表（保持当前筛选状态）
+                loadRecordings();
+            }
+
+            currentVideoRecordingId = null;
+            currentVideoSegments = [];
+            currentSubtitleIndex = -1;
+        }
+
+
+        // 切换已看状态
+        async function toggleWatch() {
+            if (!currentVideoRecordingId) return;
+            
+            // 找到当前录播的本地 id（先从录播列表找，找不到从搜索结果找）
+            let rec = recordings.find(r => String(r.recording_id) === String(currentVideoRecordingId));
+            let recId = rec ? rec.id : null;
+            
+            if (!recId) {
+                // 从搜索结果里找
+                const searchItem = allSearchResults.find(item => String(item.recording_id) === String(currentVideoRecordingId));
+                if (searchItem && searchItem.rec_id) {
+                    recId = searchItem.rec_id;
+                }
+            }
+            
+            if (!recId) return;
+            
+            try {
+                const res = await fetch(API_BASE + '/recordings/' + recId + '/watch', {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                // 更新按钮状态
+                const btn = document.getElementById('btn-watch');
+                if (data.is_watched) {
+                    btn.classList.add('watched');
+                    btn.textContent = '★ 已看';
+                } else {
+                    btn.classList.remove('watched');
+                    btn.textContent = '☆ 标记已看';
+                }
+                
+                // 更新 recordings 数组中的状态
+                if (rec) {
+                    rec.is_watched = data.is_watched ? 1 : 0;
+                }
+                
+                // 更新搜索结果中的状态
+                allSearchResults.forEach(item => {
+                    if (String(item.recording_id) === String(currentVideoRecordingId)) {
+                        item.is_watched = data.is_watched ? 1 : 0;
+                    }
+                });
+                
+                // 刷新录播列表卡片显示
+                if (typeof renderRecordings === 'function') {
+                    renderRecordings();
+                }
+
+                // 更新搜索结果中对应卡片的样式（不重新渲染，保持滚动位置）
+                const searchCards = document.querySelectorAll('.search-result-group');
+                searchCards.forEach(card => {
+                    if (String(card.dataset.recordingId) === String(currentVideoRecordingId)) {
+                        if (data.is_watched) {
+                            card.classList.add('watched');
+                            // 添加已看角标（如果没有的话）
+                            if (!card.querySelector('.search-watched-badge')) {
+                                const badge = document.createElement('span');
+                                badge.className = 'search-watched-badge';
+                                badge.style.cssText = 'position: absolute; top: 12px; right: 16px; background: #4ade80; color: #000; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600;';
+                                badge.textContent = '✓ 已看';
+                                card.appendChild(badge);
+                            }
+                        } else {
+                            card.classList.remove('watched');
+                            // 移除已看角标
+                            const badge = card.querySelector('.search-watched-badge');
+                            if (badge) badge.remove();
+                        }
+                    }
+                });
+            } catch (err) {
+                showToast('操作失败: ' + err.message);
+            }
+        }
+                
+
+        
+        function backToList() {
+            document.getElementById("subtitle-detail").style.display = "none";
+            if (previousView === "search") {
+                // 回到搜索结果页面
+                document.getElementById("recordings-view").style.display = "none";
+                document.getElementById("search-results").classList.add("active");
+            } else {
+                // 回到录播列表
+                document.getElementById("recordings-view").style.display = "block";
+                document.getElementById("search-results").classList.remove("active");
+            }
+            currentSubtitle = null;
+            currentSegments = [];
+        }
+
+        // 通过标题和主播查找字幕并查看
+        function viewSubtitleByRecordingId(recordingId) {
+            const subtitle = subtitles.find(s => s.recording_id === recordingId);
+            if (subtitle) {
+                viewSubtitle(subtitle.id);
+            } else {
+                showToast('未找到字幕');
+            }
+        }
+
+        // 通过 recording_id 查找字幕并删除
+        async function deleteSubtitleByRecordingId(recordingId, recordingDbId) {
+            const subtitle = subtitles.find(s => s.recording_id === recordingId);
+            if (!subtitle) {
+                showToast('未找到字幕');
+                return;
+            }
+
+            if (!confirm(`确定要删除字幕「${subtitle.title}」吗？`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(API_BASE + '/subtitle/' + subtitle.id, {
+                    method: 'DELETE',
+                });
+
+                if (res.ok) {
+                    showToast('字幕已删除');
+                    // 从字幕列表里移除
+                    subtitles = subtitles.filter(s => s.id !== subtitle.id);
+                    // 重新渲染当前页，不跳转
+                    renderRecordings();
+                    // 更新统计数字
+                    updateStats();
+                } else {
+                    showToast('删除失败');
+                }
+            } catch (err) {
+                showToast('删除失败: ' + err.message);
+            }
+        }
+
+        // 搜索字幕
+        async function searchSubtitles(keyword, resetFilter = true) {
+            // 关闭字幕详情页
+            document.getElementById('subtitle-detail').style.display = 'none';
+            
+            // 只有手动新搜索时才重置"只看未看"状态
+            if (resetFilter) {
+                searchOnlyUnwatched = false;
+            }
+            if (!keyword.trim()) {
+                document.getElementById('search-results').classList.remove('active');
+                document.getElementById('recordings-view').style.display = 'block';
+                allSearchResults = [];
+                currentSearchStreamer = null;
+                renderRecordings();
+                return;
+            }
+
+            try {
+                const body = {
+                    keyword: keyword,
+                    limit: 10000,
+                    only_unwatched: searchOnlyUnwatched,
+                };
+                // 如果当前在某个主播页面，只搜这个主播的字幕
+                if (currentStreamer) {
+                    body.streamer = currentStreamer;
+                }
+
+                const res = await fetch(API_BASE + '/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+
+                const data = await res.json();
+                allSearchResults = data.results;
+                currentSearchStreamer = null;
+                currentSearchKeyword = keyword;
+                renderSearchResults(keyword);
+            } catch (err) {
+                console.error('搜索失败:', err);
+            }
+        }
+
+        // 渲染搜索结果
+        function renderSearchResults(keyword) {
+            const container = document.getElementById('search-results');
+            document.getElementById('recordings-view').style.display = 'none';
+            container.classList.add('active');
+            
+            // 隐藏分页
+            const pagination = document.querySelector('.pagination');
+            if (pagination) pagination.style.display = 'none';
+
+            // 根据当前筛选的主播过滤结果
+            let results = allSearchResults;
+            if (currentSearchStreamer) {
+                results = allSearchResults.filter(item => item.streamer === currentSearchStreamer);
+            }
+
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <div class="empty-state-text">未找到匹配结果</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 提取所有有匹配结果的主播列表（去重）
+            const streamerMap = {};
+            allSearchResults.forEach(item => {
+                if (!streamerMap[item.streamer]) {
+                    streamerMap[item.streamer] = {
+                        streamer: item.streamer,
+                        streamer_name: item.streamer_name,
+                        streamer_avatar: item.streamer_avatar,
+                        count: 0
+                    };
+                }
+                streamerMap[item.streamer].count++;
+            });
+            const searchStreamers = Object.values(streamerMap);
+
+            // 按 subtitle_id 分组
+            const groups = {};
+            results.forEach(item => {
+                if (!groups[item.subtitle_id]) {
+                    groups[item.subtitle_id] = {
+                        subtitle_id: item.subtitle_id,
+                        recording_id: item.recording_id,
+                        title: item.title,
+                        streamer: item.streamer,
+                        platform: item.platform,
+                        duration: item.duration,
+                        streamer_name: item.streamer_name,
+                        streamer_avatar: item.streamer_avatar,
+                        record_time: item.record_time,
+                        is_watched: item.is_watched,
+                        rec_id: item.rec_id,
+                        segments: []
+                    };
+                }
+                groups[item.subtitle_id].segments.push(item);
+            });
+
+            const groupList = Object.values(groups);
+            
+            // 按主播分组，先按主播最新匹配录播时间倒序，每个主播内部按时间倒序
+            // 先计算每个主播的最新匹配时间
+            const streamerLatestTime = {};
+            groupList.forEach(group => {
+                const time = group.record_time ? new Date(group.record_time).getTime() : 0;
+                if (!streamerLatestTime[group.streamer] || time > streamerLatestTime[group.streamer]) {
+                    streamerLatestTime[group.streamer] = time;
+                }
+            });
+            
+            groupList.sort((a, b) => {
+                // 先按主播最新匹配时间倒序
+                const latestA = streamerLatestTime[a.streamer] || 0;
+                const latestB = streamerLatestTime[b.streamer] || 0;
+                if (latestA !== latestB) {
+                    return latestB - latestA;
+                }
+                // 同一个主播按时间倒序
+                const timeA = a.record_time ? new Date(a.record_time).getTime() : 0;
+                const timeB = b.record_time ? new Date(b.record_time).getTime() : 0;
+                return timeB - timeA;
+            });
+
+            // 当前选中的主播信息
+
+            // 按主播分组
+            const streamerGroupsMap = {};
+            groupList.forEach(group => {
+                if (!streamerGroupsMap[group.streamer]) {
+                    streamerGroupsMap[group.streamer] = {
+                        streamer: group.streamer,
+                        streamer_name: group.streamer_name,
+                        streamer_avatar: group.streamer_avatar,
+                        recording_count: 0,
+                        match_count: 0,
+                        groups: []
+                    };
+                }
+                streamerGroupsMap[group.streamer].groups.push(group);
+                streamerGroupsMap[group.streamer].recording_count++;
+                streamerGroupsMap[group.streamer].match_count += group.segments.length;
+            });
+            // 按主播最新匹配时间倒序
+            const streamerGroups = Object.values(streamerGroupsMap).sort((a, b) => {
+                const timeA = a.groups[0]?.record_time ? new Date(a.groups[0].record_time.replace(' ', 'T') + 'Z').getTime() : 0;
+                const timeB = b.groups[0]?.record_time ? new Date(b.groups[0].record_time.replace(' ', 'T') + 'Z').getTime() : 0;
+                return timeB - timeA;
+            });
+
+            const currentStreamerInfo = currentSearchStreamer ? streamerMap[currentSearchStreamer] : null;
+            const currentStreamerDisplay = currentStreamerInfo ? (currentStreamerInfo.streamer_name || currentStreamerInfo.streamer) : '全部主播';
+
+            container.innerHTML = `
+                <div style="padding: 16px 24px; font-size: 13px; color: #888; display: flex; align-items: center; justify-content: space-between;">
+                    <div>找到 ${results.length} 条匹配，分布在 ${groupList.length} 个录播中</div>
+                    <div style="position: relative;display: flex;gap: 8px;">
+                        <button class="btn btn-secondary btn-small" id="filter-unwatched-btn" style="${searchOnlyUnwatched ? 'background: #4ade80; color: #000;' : ''}">${searchOnlyUnwatched ? '✓ 只看未看' : '只看未看'}</button>
+                        <button class="btn btn-secondary btn-small" id="filter-all-btn" style="${!currentSearchStreamer ? 'background: #667eea; color: #fff;' : ''}">全部主播</button>
+                        <button class="btn btn-secondary btn-small" id="filter-streamer-btn" style="${currentSearchStreamer ? 'background: #667eea; color: #fff;' : ''}">
+                            指定主播 ▾
+                        </button>
+                        <div id="streamer-filter-dropdown" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 12px; z-index: 100; min-width: 280px; max-height: 400px; overflow-y: auto;">
+                            <div style="margin-bottom: 12px;">
+                                <input type="text" id="streamer-filter-search" placeholder="搜索主播..." style="width: 100%; padding: 8px 12px; background: #2a2a4a; border: 1px solid #3a3a5a; border-radius: 6px; color: #fff; font-size: 13px; box-sizing: border-box;">
+                            </div>
+                            <div id="streamer-filter-list">
+                                ${searchStreamers.map(s => `
+                                    <div class="streamer-filter-item" data-streamer="${s.streamer}" style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; cursor: pointer; ${currentSearchStreamer === s.streamer ? 'background: #2a2a4a;' : ''}">
+                                        ${s.streamer_avatar 
+                                            ? `<img src="${s.streamer_avatar}" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;" onerror="this.style.display='none'">`
+                                            : `<span style="width: 32px; height: 32px; border-radius: 50%; background: #2a2a4a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px;">👤</span>`
+                                        }
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(s.streamer_name || s.streamer)}</div>
+                                            <div style="font-size: 11px; color: #666;">${s.count} 条匹配</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ${streamerGroups.map(sg => {
+                    const isCollapsed = collapsedStreamers[sg.streamer];
+                    const streamerDisplay = sg.streamer_name || sg.streamer;
+                    
+                    return `
+                        <div class="search-streamer-group" data-streamer="${sg.streamer}">
+                            <div class="search-streamer-header" data-streamer="${sg.streamer}" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #2a2a4a; user-select: none;">
+                                <span class="collapse-icon" style="width: 16px; text-align: center; color: #888; flex-shrink: 0; font-size: 10px;">${isCollapsed ? '▶' : '▼'}</span>
+                                ${sg.streamer_avatar
+                                    ? `<img src="${sg.streamer_avatar}" class="nav-item-avatar" alt="" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;" onerror="this.style.display='none'">`
+                                    : `<span style="width: 36px; height: 36px; border-radius: 50%; background: #2a2a4a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px;">👤</span>`
+                                }
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 14px; font-weight: 600; color: #fff;">${escapeHtml(streamerDisplay)}</div>
+                                    <div style="font-size: 12px; color: #888; margin-top: 2px;">${sg.recording_count} 个录播 · ${sg.match_count} 条匹配</div>
+                                </div>
+                            </div>
+                            <div class="search-streamer-content" data-streamer="${sg.streamer}" style="${isCollapsed ? 'display: none;' : ''}">
+                                ${sg.groups.map(group => {
+                                    // 格式化录播时间
+                                    let recordTimeStr = '';
+                                    if (group.record_time) {
+                                        let timeStr = group.record_time;
+                                        if (timeStr && !timeStr.endsWith('Z')) {
+                                            timeStr = timeStr.replace(' ', 'T') + 'Z';
+                                        }
+                                        const dt = new Date(timeStr);
+                                        const year = dt.getFullYear();
+                                        const month = String(dt.getMonth() + 1).padStart(2, '0');
+                                        const day = String(dt.getDate()).padStart(2, '0');
+                                        const hours = String(dt.getHours()).padStart(2, '0');
+                                        const minutes = String(dt.getMinutes()).padStart(2, '0');
+                                        const seconds = String(dt.getSeconds()).padStart(2, '0');
+                                        recordTimeStr = `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+                                    }
+
+                                    return `
+                                        <div class="search-result-group ${group.is_watched ? 'watched' : ''}" data-subtitle-id="${group.subtitle_id}" data-recording-id="${group.recording_id}" style="cursor: pointer; position: relative;">
+                                            <div class="search-result-group-header" style="display: flex; align-items: center; gap: 12px; padding-left: 44px; padding-right: 60px;">
+                                                <div style="flex: 1; min-width: 0;">
+                                                    <div class="search-result-group-title">${escapeHtml(group.title)}</div>
+                                                    ${group.is_watched ? '<span class="search-watched-badge" style="position: absolute; top: 12px; right: 16px; background: #4ade80; color: #000; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600;">✓ 已看</span>' : ''}
+                                                    <div class="search-result-group-meta">
+                                                        ${recordTimeStr} · ${formatDuration(group.duration)} · ${group.segments.length} 条匹配
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="search-result-group-content" data-group-id="${group.subtitle_id}" style="display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 12px 16px 12px 44px; position: relative;">
+                                                ${group.segments.map((seg, idx) => {
+                                                    const highlighted = highlightKeyword(seg.text, keyword);
+                                                    return `
+                                                        <span class="search-segment-item" data-index="${idx}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #ddd; line-height: 1.8;">
+                                                            <span class="search-result-time" style="flex-shrink: 0;">${formatDuration(seg.start_time)}</span>
+                                                            <span class="search-result-text">${highlighted}</span>
+                                                        </span>
+                                                    `;
+                                                }).join('')}
+                                                <span class="search-more-link" style="display: none; width: 100%; text-align: center; font-size: 12px; color: #667eea; cursor: pointer; padding-top: 8px;">还有 0 条匹配，点击查看全部</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+
+            // 绑定事件
+            setupSearchFilterEvents(keyword);
+        }
+        
+        // 设置搜索筛选事件
+        // 切换只看未看筛选
+        function toggleSearchOnlyUnwatched() {
+            searchOnlyUnwatched = !searchOnlyUnwatched;
+            // 重新搜索
+            const keyword = document.getElementById('search-input').value;
+            if (keyword.trim()) {
+                searchSubtitles(keyword, false);
+            }
+        }
+
+        // 切换主播折叠状态
+        function toggleStreamerCollapse(streamer, keyword) {
+            if (collapsedStreamers[streamer]) {
+                delete collapsedStreamers[streamer];
+            } else {
+                collapsedStreamers[streamer] = true;
+            }
+            // 重新渲染搜索结果
+            renderSearchResults(keyword);
+        }
+
+        function setupSearchFilterEvents(keyword) {
+            // 主播折叠/展开按钮
+            document.querySelectorAll('.search-streamer-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    const streamer = header.dataset.streamer;
+                    toggleStreamerCollapse(streamer, keyword);
+                });
+            });
+
+            // 只看未看按钮
+            const unwatchedBtn = document.getElementById('filter-unwatched-btn');
+            if (unwatchedBtn) {
+                unwatchedBtn.addEventListener('click', () => {
+                    toggleSearchOnlyUnwatched();
+                });
+            }
+
+            // 全部主播按钮
+            const allBtn = document.getElementById('filter-all-btn');
+            if (allBtn) {
+                allBtn.addEventListener('click', () => {
+                    currentSearchStreamer = null;
+                    renderSearchResults(keyword);
+                });
+            }
+            
+            // 指定主播按钮
+            const streamerBtn = document.getElementById('filter-streamer-btn');
+            const dropdown = document.getElementById('streamer-filter-dropdown');
+            if (streamerBtn && dropdown) {
+                streamerBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = dropdown.style.display === 'block';
+                    dropdown.style.display = isOpen ? 'none' : 'block';
+                });
+            }
+            
+            // 点击外部关闭下拉
+            document.addEventListener('click', (e) => {
+                const dropdown = document.getElementById('streamer-filter-dropdown');
+                if (dropdown && !dropdown.contains(e.target) && e.target.id !== 'filter-streamer-btn') {
+                    dropdown.style.display = 'none';
+                }
+            });
+            
+            // 主播搜索框
+            const searchInput = document.getElementById('streamer-filter-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const keyword = e.target.value.toLowerCase().trim();
+                    const items = document.querySelectorAll('.streamer-filter-item');
+                    items.forEach(item => {
+                        const name = item.textContent.toLowerCase();
+                        item.style.display = name.includes(keyword) ? 'flex' : 'none';
+                    });
+                });
+            }
+            
+            // 主播列表项点击
+            const streamerItems = document.querySelectorAll('.streamer-filter-item');
+            streamerItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const streamer = item.dataset.streamer;
+                    currentSearchStreamer = streamer;
+                    const dropdown = document.getElementById('streamer-filter-dropdown');
+                    if (dropdown) dropdown.style.display = 'none';
+                    renderSearchResults(keyword);
+                });
+            });
+            
+            // 搜索结果分组点击 - 进入视频播放
+            const groups = document.querySelectorAll('.search-result-group');
+            groups.forEach(group => {
+                group.addEventListener('click', () => {
+                    const recordingId = group.dataset.recordingId;
+                    if (recordingId) {
+                        openVideoPlayer(recordingId);
+                    }
+                });
+            });
+
+            // 处理搜索结果的2行限制
+            requestAnimationFrame(() => {
+                document.querySelectorAll(".search-result-group-content").forEach(container => {
+                    const items = container.querySelectorAll(".search-segment-item");
+                    const moreLink = container.querySelector(".search-more-link");
+                    if (items.length === 0) return;
+                    
+                    // 先全部隐藏，避免闪烁
+                    items.forEach(item => {
+                        item.style.visibility = "hidden";
+                        item.style.display = "inline-flex";
+                    });
+                    moreLink.style.display = "none";
+                    
+                    // 计算行高
+                    const firstItem = items[0];
+                    const itemHeight = firstItem.offsetHeight;
+                    const containerTop = container.getBoundingClientRect().top;
+                    
+                    let hiddenCount = 0;
+                    let lastVisibleIndex = -1;
+                    
+                    // 遍历所有item，找出第3行及以后的
+                    for (let k = 0; k < items.length; k++) {
+                        const item = items[k];
+                        const itemTop = item.getBoundingClientRect().top - containerTop;
+                        const row = Math.round(itemTop / itemHeight);
+                        
+                        if (row >= 2) {
+                            item.style.display = "none";
+                            hiddenCount++;
+                        } else {
+                            item.style.visibility = "visible";
+                            lastVisibleIndex = k;
+                        }
+                    }
+                    
+                    if (hiddenCount > 0) {
+                        moreLink.style.display = "block";
+                        moreLink.textContent = `还有 ${hiddenCount} 条匹配，点击查看全部`;
+                        moreLink.onclick = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const subtitleId = container.closest(".search-result-group").dataset.subtitleId;
+                            if (subtitleId) {
+                                viewSubtitle(subtitleId);
+                            }
+                            return false;
+                        };
+                    }
+                });
+            });
+        }
+
+        // 高亮关键词
+        function highlightKeyword(text, keyword) {
+            const regex = new RegExp('(' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+            return escapeHtml(text).replace(regex, '<mark>$1</mark>');
+        }
+
+        // 更新统计
+        function updateStats() {
+            document.getElementById('stat-total').textContent = totalCount;
+            document.getElementById('stat-subtitles').textContent = subtitles.length;
+            document.getElementById('total-count').textContent = totalCount;
+            // live count 需要单独统计，这里先简化
+            document.getElementById('live-count').textContent = streamers.reduce((sum, s) => sum + (s.live_count || 0), 0);
+            document.getElementById('subtitle-count').textContent = subtitles.length;
+            document.getElementById('unsubtitled-count').textContent = Math.max(0, totalCount - subtitles.length);
+        }
+
+        // 设置事件监听
+        function setupEventListeners() {
+            // 主播搜索
+            const streamerSearchInput = document.getElementById('streamer-search');
+            if (streamerSearchInput) {
+                streamerSearchInput.addEventListener('input', (e) => {
+                    streamerSearchKeyword = e.target.value;
+                    renderStreamers();
+                });
+            }
+
+            // 导航点击
+            document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+                item.addEventListener('click', async () => {
+                    // 关闭字幕详情页
+                    document.getElementById('subtitle-detail').style.display = 'none';
+                    document.getElementById('recordings-view').style.display = 'block';
+                    document.getElementById('search-results').classList.remove('active');
+                    
+                    currentView = item.dataset.view;
+                    currentStreamer = null;
+                    currentPage = 1;
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    const titles = {
+                        all: '全部录播',
+                        live: '正在直播',
+                        subtitled: '已有字幕',
+                        unsubtitled: '无字幕',
+                    };
+                    document.getElementById('current-title').textContent = titles[currentView] || '录播列表';
+                    
+                    // 自动设置筛选条件
+                    const toolbar = document.querySelector('.toolbar');
+                    if (currentView === 'subtitled') {
+                        currentFilter = 'subtitled';
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelector('.filter-btn[data-filter="subtitled"]')?.classList.add('active');
+                        if (toolbar) toolbar.style.display = 'none';
+                    } else if (currentView === 'unsubtitled') {
+                        currentFilter = 'unsubtitled';
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelector('.filter-btn[data-filter="unsubtitled"]')?.classList.add('active');
+                        if (toolbar) toolbar.style.display = 'none';
+                    } else if (currentView === 'live') {
+                        currentFilter = 'all';
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelector('.filter-btn[data-filter="all"]')?.classList.add('active');
+                        if (toolbar) toolbar.style.display = 'none';
+                    } else {
+                        currentFilter = 'all';
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelector('.filter-btn[data-filter="all"]')?.classList.add('active');
+                        if (toolbar) toolbar.style.display = 'flex';
+                    }
+                    
+                    // 更新搜索框提示
+                    document.getElementById('search-input').placeholder = '搜索全部字幕内容...';
+                    
+                    try {
+                        await loadRecordingsPage(1);
+                        renderRecordings();
+                    } catch (err) {
+                        showToast('加载失败: ' + err.message);
+                    }
+                });
+            });
+
+            // 筛选按钮
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    // 关闭字幕详情页
+                    document.getElementById('subtitle-detail').style.display = 'none';
+                    document.getElementById('recordings-view').style.display = 'block';
+                    document.getElementById('search-results').classList.remove('active');
+                    
+                    currentFilter = btn.dataset.filter;
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPage = 1;
+                    try {
+                        await loadRecordingsPage(1);
+                        renderRecordings();
+                    } catch (err) {
+                        showToast('加载失败: ' + err.message);
+                    }
+                });
+            });
+
+            // 搜索框 - 按回车键搜索
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    searchSubtitles(searchInput.value);
+                }
+            });
+
+            // 详情页搜索框
+            const detailSearchInput = document.getElementById('detail-search');
+            let detailSearchTimer;
+            detailSearchInput.addEventListener('input', () => {
+                clearTimeout(detailSearchTimer);
+                detailSearchTimer = setTimeout(() => {
+                    const keyword = detailSearchInput.value.trim();
+                    if (!keyword) {
+                        renderSubtitleSegments(currentSegments);
+                    } else {
+                        const filtered = currentSegments.filter(seg => 
+                            seg.text.toLowerCase().includes(keyword.toLowerCase())
+                        );
+                        renderSubtitleSegments(filtered, keyword);
+                    }
+                }, 200);
+            });
+        }
+
+        // 工具函数
+        function formatDuration(seconds) {
+            if (!seconds || seconds === 0) return '00:00';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) {
+                return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+            return `${m}:${String(s).padStart(2, '0')}`;
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+        }
+
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message, duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // 启动
+        init();
+    
+        // ==================== 批量选择 ====================
+        const selectedIds = new Set();
+        let queuePanelOpen = false;
+        let queuePaused = false;
+        let queuePollTimer = null;
+        let lastQueueData = null;
+
+        function toggleSelect(id) {
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+            } else {
+                selectedIds.add(id);
+            }
+            updateBatchBar();
+            renderRecordings();
+        }
+
+        function toggleSelectAll() {
+            const visibleRecs = recordings.filter(rec => {
+                if (currentFilter === 'live') return rec.is_live;
+                if (currentFilter === 'subtitled') return hasSubtitleForRec(rec);
+                if (currentFilter === 'unsubtitled') return !hasSubtitleForRec(rec);
+                return !rec.is_live;
+            });
+            const allSelected = visibleRecs.every(rec => selectedIds.has(rec.id));
+            if (allSelected) {
+                visibleRecs.forEach(rec => selectedIds.delete(rec.id));
+            } else {
+                visibleRecs.forEach(rec => selectedIds.add(rec.id));
+            }
+            updateBatchBar();
+            renderRecordings();
+        }
+
+        function clearSelection() {
+            selectedIds.clear();
+            updateBatchBar();
+            renderRecordings();
+        }
+
+        function updateBatchBar() {
+            const bar = document.getElementById('batch-bar');
+            const countEl = document.getElementById('selected-count');
+            const cb = document.getElementById('select-all-cb');
+            if (!bar) return;
+            
+            if (selectedIds.size > 0) {
+                bar.classList.add('active');
+            } else {
+                bar.classList.remove('active');
+            }
+            countEl.textContent = selectedIds.size;
+            
+            // 更新全选框状态
+            const visibleRecs = recordings.filter(rec => {
+                if (currentFilter === 'live') return rec.is_live;
+                if (currentFilter === 'subtitled') return hasSubtitleForRec(rec);
+                if (currentFilter === 'unsubtitled') return !hasSubtitleForRec(rec);
+                return !rec.is_live;
+            });
+            const allSelected = visibleRecs.length > 0 && visibleRecs.every(rec => selectedIds.has(rec.id));
+            if (allSelected) {
+                cb.classList.add('checked');
+            } else {
+                cb.classList.remove('checked');
+            }
+        }
+
+        function hasSubtitleForRec(rec) {
+            if (!rec.recording_id) return false;
+            return subtitles.some(s => String(s.recording_id) === String(rec.recording_id));
+        }
+
+        // 获取录播在队列中的状态：null=不在队列, "running"=生成中, "waiting"=排队中
+        function getRecQueueStatus(rec) {
+            if (!rec.recording_id || !lastQueueData) return null;
+            const allTasks = [...(lastQueueData.tasks || []), ...(lastQueueData.recent || [])];
+            for (const t of allTasks) {
+                if (String(t.recording_id) === String(rec.recording_id)) {
+                    if (t.status === "running") return "running";
+                    if (t.status === "waiting") return "waiting";
+                }
+            }
+            return null;
+        }
+
+        // 批量生成字幕
+        async function batchGenerate() {
+            if (selectedIds.size === 0) return;
+            
+            const items = [];
+            for (const id of selectedIds) {
+                const rec = recordings.find(r => r.id === id);
+                if (rec && !rec.is_live) {
+                    items.push({
+                        recording_id: String(rec.recording_id || rec.id),
+                        streamer: rec.streamer,
+                        platform: rec.platform,
+                        title: rec.title,
+                    });
+                }
+            }
+            
+            if (items.length === 0) {
+                showToast('没有可生成字幕的录播');
+                return;
+            }
+            
+            const threads = parseInt(document.getElementById('threads-select')?.value || '16');
+            
+            try {
+                const model = document.getElementById('model-select')?.value || 'paraformer-large';
+                const resp = await fetch('/api/transcribe/batch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({items, threads, model})
+                });
+                const data = await resp.json();
+                
+                let msg = `已添加 ${data.submitted.length} 个任务到队列`;
+                if (data.skipped.length > 0) {
+                    msg += `，跳过 ${data.skipped.length} 个（${data.skipped.map(s => s.reason).join('、')}）`;
+                }
+                showToast(msg);
+                clearSelection();
+                fetchQueue();
+                if (!queuePollTimer) startQueuePolling();
+                if (!queuePanelOpen) toggleQueuePanel();
+            } catch (e) {
+                showToast('批量生成失败: ' + e.message);
+            }
+        }
+
+        // 批量删除字幕
+        async function batchDelete() {
+            if (selectedIds.size === 0) return;
+            
+            const subtitleIds = [];
+            for (const id of selectedIds) {
+                const rec = recordings.find(r => r.id === id);
+                if (rec && rec.recording_id) {
+                    const sub = subtitles.find(s => String(s.recording_id) === String(rec.recording_id));
+                    if (sub) subtitleIds.push(sub.id);
+                }
+            }
+            
+            if (subtitleIds.length === 0) {
+                showToast('选中的录播没有字幕可删除');
+                return;
+            }
+            
+            if (!confirm(`确定删除选中的 ${subtitleIds.length} 个字幕吗？`)) return;
+            
+            try {
+                await fetch('/api/subtitles/batch', {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ids: subtitleIds})
+                });
+                showToast(`已删除 ${subtitleIds.length} 个字幕`);
+                clearSelection();
+                loadSubtitles();
+                loadRecordings();
+            } catch (e) {
+                showToast('删除失败: ' + e.message);
+            }
+        }
+
+        // ==================== 任务队列 ====================
+        function toggleQueuePanel() {
+            queuePanelOpen = !queuePanelOpen;
+            const panel = document.getElementById('queue-panel');
+            if (queuePanelOpen) {
+                panel.classList.add('open');
+                fetchQueue();
+            } else {
+                panel.classList.remove('open');
+            }
+        }
+
+        function startQueuePolling() {
+            if (queuePollTimer) clearInterval(queuePollTimer);
+            queuePollTimer = setInterval(fetchQueue, 2000);
+        }
+
+        function stopQueuePolling() {
+            if (queuePollTimer) {
+                clearInterval(queuePollTimer);
+                queuePollTimer = null;
+            }
+        }
+
+        async function fetchQueue() {
+            try {
+                const resp = await fetch('/api/queue');
+                const data = await resp.json();
+                lastQueueData = data;
+                renderQueue(data);
+                // 刷新录播列表以更新卡片上的队列状态
+                if (document.getElementById('recordings-view').style.display !== 'none') {
+                    renderRecordings();
+                }
+            } catch (e) {
+                console.error('获取队列失败', e);
+            }
+        }
+
+        function renderQueue(data) {
+            const list = document.getElementById('queue-list');
+            const countEl = document.getElementById('queue-count');
+            const badge = document.getElementById('queue-badge');
+            const pauseBtn = document.getElementById('queue-pause-btn');
+            const toggleBtn = document.getElementById('queue-toggle-btn');
+            
+            const activeTasks = data.tasks.filter(t => t.status === 'waiting' || t.status === 'running');
+            const totalActive = activeTasks.length;
+            
+            countEl.textContent = totalActive;
+            
+            // 更新角标
+            if (totalActive > 0) {
+                badge.style.display = 'flex';
+                badge.textContent = totalActive;
+                toggleBtn.classList.add('has-tasks');
+            } else {
+                badge.style.display = 'none';
+                toggleBtn.classList.remove('has-tasks');
+            }
+            
+            // 更新暂停按钮
+            queuePaused = data.paused;
+            if (queuePaused) {
+                pauseBtn.textContent = '▶ 继续';
+                pauseBtn.style.background = '#48bb78';
+            } else {
+                pauseBtn.textContent = '⏸ 暂停';
+                pauseBtn.style.background = '#f0ad4e';
+            }
+            
+            // 渲染列表
+            let html = '';
+            
+            // 进行中和等待中的任务
+            if (activeTasks.length > 0) {
+                html += '<div class="queue-section-title">进行中 / 等待中</div>';
+                activeTasks.forEach(task => {
+                    html += renderQueueItem(task, false);
+                });
+            }
+            
+            // 最近完成的
+            if (data.recent && data.recent.length > 0) {
+                html += '<div class="queue-section-title">最近完成</div>';
+                data.recent.forEach(task => {
+                    html += renderQueueItem(task, true);
+                });
+            }
+            
+            if (html === '') {
+                html = '<div class="queue-empty">暂无任务</div>';
+            }
+            
+            list.innerHTML = html;
+            updateQueueSelectUI();
+            
+            // 如果没有活动任务，停止轮询
+            if (totalActive === 0 && queuePollTimer) {
+                // 保持轮询一会儿，等完成状态更新
+                setTimeout(() => {
+                    if (lastQueueData && lastQueueData.tasks.filter(t => t.status === 'waiting' || t.status === 'running').length === 0) {
+                        stopQueuePolling();
+                        loadSubtitles();
+                        loadRecordingsPage(currentPage);
+                    }
+                }, 2000);
+            }
+        }
+
+        const queueSelectedIds = new Set();
+
+        function toggleQueueSelectAll() {
+            const activeTasks = lastQueueData ? lastQueueData.tasks.filter(t => t.status === 'waiting' || t.status === 'running') : [];
+            const allSelected = activeTasks.length > 0 && activeTasks.every(t => queueSelectedIds.has(t.id));
+            if (allSelected) {
+                activeTasks.forEach(t => queueSelectedIds.delete(t.id));
+            } else {
+                activeTasks.forEach(t => queueSelectedIds.add(t.id));
+            }
+            updateQueueSelectUI();
+            renderQueue(lastQueueData);
+        }
+
+        function toggleQueueSelect(taskId) {
+            if (queueSelectedIds.has(taskId)) {
+                queueSelectedIds.delete(taskId);
+            } else {
+                queueSelectedIds.add(taskId);
+            }
+            updateQueueSelectUI();
+            renderQueue(lastQueueData);
+        }
+
+        function updateQueueSelectUI() {
+            const cb = document.getElementById('queue-select-all');
+            const btn = document.getElementById('queue-batch-remove');
+            if (!cb || !lastQueueData) return;
+            
+            const activeTasks = lastQueueData.tasks.filter(t => t.status === 'waiting' || t.status === 'running');
+            const allSelected = activeTasks.length > 0 && activeTasks.every(t => queueSelectedIds.has(t.id));
+            
+            if (allSelected) {
+                cb.classList.add('checked');
+            } else {
+                cb.classList.remove('checked');
+            }
+            
+            if (queueSelectedIds.size > 0) {
+                btn.style.display = '';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        async function batchRemoveQueue() {
+            for (const taskId of queueSelectedIds) {
+                await fetch(`/api/queue/${taskId}`, {method: 'DELETE'});
+            }
+            queueSelectedIds.clear();
+            fetchQueue();
+        }
+
+        function renderQueueItem(task, isRecent) {
+            const statusText = {
+                'waiting': '等待中',
+                'running': '生成中',
+                'completed': '已完成',
+                'failed': '失败',
+                'cancelled': '已取消',
+            }[task.status] || task.status;
+            
+            const progress = task.progress || 0;
+            const title = escapeHtml(task.title || '未知');
+            
+            let actions = '';
+            if (task.status === 'waiting' || task.status === 'running') {
+                actions = `<button class="queue-item-btn danger" onclick="cancelQueueTask('${task.id}')">取消</button>`;
+            } else if (task.status === 'completed') {
+                actions = `<button class="queue-item-btn" onclick="removeQueueTask('${task.id}')">移除</button>`;
+            } else if (task.status === 'failed' || task.status === 'cancelled') {
+                actions = `<button class="queue-item-btn" onclick="retryQueueTask('${task.id}')">重试</button>
+                           <button class="queue-item-btn danger" onclick="removeQueueTask('${task.id}')">移除</button>`;
+            }
+            
+            let progressBar = '';
+            if (task.status === 'running') {
+                progressBar = `<div class="queue-progress"><div class="queue-progress-bar" style="width:${progress}%"></div></div>`;
+            }
+            
+            const canSelect = task.status === 'waiting' || task.status === 'running';
+            const checkbox = canSelect ? `<div class="queue-item-checkbox ${queueSelectedIds.has(task.id) ? 'checked' : ''}" onclick="toggleQueueSelect('${task.id}')"></div>` : '';
+            
+            return `
+                <div class="queue-item">
+                    ${checkbox}
+                    <div class="queue-item-info">
+                        <div class="queue-item-title">${title}</div>
+                        <div class="queue-item-meta">${statusText}${task.status === 'running' ? ' ' + progress + '%' : ''}</div>
+                    </div>
+                    ${progressBar}
+                    <span class="queue-item-status ${task.status}">${statusText}</span>
+                    <div class="queue-item-actions">${actions}</div>
+                </div>
+            `;
+        }
+
+        async function cancelQueueTask(taskId) {
+            try {
+                await fetch(`/api/queue/${taskId}`, {method: 'DELETE'});
+                fetchQueue();
+            } catch (e) {
+                showToast('取消失败: ' + e.message);
+            }
+        }
+
+        async function removeQueueTask(taskId) {
+            try {
+                await fetch(`/api/queue/${taskId}`, {method: 'DELETE'});
+                fetchQueue();
+            } catch (e) {
+                showToast('移除失败: ' + e.message);
+            }
+        }
+
+        async function retryQueueTask(taskId) {
+            try {
+                await fetch(`/api/queue/${taskId}/retry`, {method: 'POST'});
+                fetchQueue();
+                if (!queuePollTimer) startQueuePolling();
+            } catch (e) {
+                showToast('重试失败: ' + e.message);
+            }
+        }
+
+        async function togglePause() {
+            try {
+                if (queuePaused) {
+                    await fetch('/api/queue/resume', {method: 'POST'});
+                } else {
+                    await fetch('/api/queue/pause', {method: 'POST'});
+                }
+                fetchQueue();
+            } catch (e) {
+                showToast('操作失败: ' + e.message);
+            }
+        }
+
+        async function clearCompletedQueue() {
+            if (!lastQueueData) return;
+            for (const task of lastQueueData.recent) {
+                if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+                    await fetch(`/api/queue/${task.id}`, {method: 'DELETE'});
+                }
+            }
+            fetchQueue();
+        }
+
+        // 修改单个生成字幕函数，使用队列
+
+    
+        async function generateSubtitle(id) {
+            const rec = recordings.find(r => r.id === id);
+            if (!rec) return;
+
+            if (rec.is_live) {
+                showToast('直播中的录播无法生成字幕');
+                return;
+            }
+
+            const threads = parseInt(document.getElementById('threads-select')?.value || '16');
+
+            try {
+                const model = document.getElementById('model-select')?.value || 'paraformer-large';
+                const resp = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        recording_id: String(rec.recording_id || rec.id),
+                        streamer: rec.streamer,
+                        platform: rec.platform,
+                        title: rec.title,
+                        threads: threads,
+                        model: model,
+                    })
+                });
+                const data = await resp.json();
+                showToast('已添加到生成队列');
+                fetchQueue();
+                if (!queuePollTimer) startQueuePolling();
+                if (!queuePanelOpen) toggleQueuePanel();
+            } catch (e) {
+                showToast('提交失败: ' + e.message);
+            }
+        }
+
+        // 初始化模型选择（从 localStorage 读取上次选择）
+        const modelSelect = document.getElementById('model-select');
+        if (modelSelect) {
+            const savedModel = localStorage.getItem('selectedModel');
+            if (savedModel) {
+                modelSelect.value = savedModel;
+            }
+            modelSelect.addEventListener('change', function() {
+                localStorage.setItem('selectedModel', this.value);
+            });
+        }
+
+        // 页面加载时获取队列状态
+        fetchQueue();
+
+    </script>
+
+<!-- 设置按钮 -->
+<button id="settings-btn" style="position: fixed; bottom: 20px; left: 20px; width: 50px; height: 50px; border-radius: 50%; background: #6366f1; color: white; border: none; font-size: 20px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;" title="设置">
+    ⚙️
+</button>
+
+<!-- 设置模态框 -->
+<div id="settings-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; width: 360px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin: 0 0 20px 0; font-size: 18px;">⚙️ 设置</h3>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">下载线程数</label>
+            <div style="display: flex; gap: 10px;">
+                <button class="thread-option" data-threads="8" style="flex: 1; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; font-size: 14px;">
+                    <div style="font-weight: 600;">8 线程</div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">🟢 保守稳定</div>
+                </button>
+                <button class="thread-option" data-threads="16" style="flex: 1; padding: 10px; border: 2px solid #6366f1; border-radius: 8px; background: #eef2ff; cursor: pointer; font-size: 14px;">
+                    <div style="font-weight: 600; color: #6366f1;">16 线程</div>
+                    <div style="font-size: 12px; color: #6366f1; margin-top: 4px;">🟡 平衡推荐</div>
+                </button>
+                <button class="thread-option" data-threads="32" style="flex: 1; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; font-size: 14px;">
+                    <div style="font-weight: 600;">32 线程</div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">🔴 激进高速</div>
+                </button>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="settings-close" style="padding: 8px 16px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer;">取消</button>
+            <button id="settings-save" style="padding: 8px 16px; border: none; border-radius: 6px; background: #6366f1; color: white; cursor: pointer;">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 设置功能
+(function() {
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsClose = document.getElementById('settings-close');
+    const settingsSave = document.getElementById('settings-save');
+    const threadOptions = document.querySelectorAll('.thread-option');
+    
+    let selectedThreads = parseInt(localStorage.getItem('downloadThreads') || '16');
+    
+    // 更新选中状态
+    function updateSelected() {
+        threadOptions.forEach(btn => {
+            const threads = parseInt(btn.dataset.threads);
+            if (threads === selectedThreads) {
+                btn.style.borderColor = '#6366f1';
+                btn.style.background = '#eef2ff';
+                btn.querySelector('div:first-child').style.color = '#6366f1';
+                btn.querySelector('div:last-child').style.color = '#6366f1';
+            } else {
+                btn.style.borderColor = '#e5e7eb';
+                btn.style.background = 'white';
+                btn.querySelector('div:first-child').style.color = 'inherit';
+                btn.querySelector('div:last-child').style.color = '#6b7280';
+            }
+        });
+    }
+    
+    // 打开设置
+    settingsBtn.addEventListener('click', () => {
+        selectedThreads = parseInt(localStorage.getItem('downloadThreads') || '16');
+        updateSelected();
+        settingsModal.style.display = 'flex';
+    });
+    
+    // 关闭设置
+    settingsClose.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+    
+    // 点击背景关闭
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    });
+    
+    // 选择线程数
+    threadOptions.forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectedThreads = parseInt(btn.dataset.threads);
+            updateSelected();
+        });
+    });
+    
+    // 保存设置
+    settingsSave.addEventListener('click', () => {
+        localStorage.setItem('downloadThreads', selectedThreads);
+        settingsModal.style.display = 'none';
+        // 显示提示
+        const toast = document.createElement('div');
+        toast.textContent = `设置已保存：${selectedThreads} 线程`;
+        toast.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #10b981; color: white; padding: 10px 20px; border-radius: 8px; z-index: 3000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    });
+    
+    // 初始化
+    updateSelected();
+})();
+</script>
+
+
+    <!-- 任务队列按钮 -->
+    <button class="queue-toggle-btn" id="queue-toggle-btn" onclick="toggleQueuePanel()" title="任务队列">
+        📋<span style="font-size:12px;margin-left:4px;">队列</span>
+        <span class="queue-toggle-badge" id="queue-badge" style="display:none;">0</span>
+    </button>
+
+    <!-- 任务队列面板 -->
+    <div class="queue-panel" id="queue-panel">
+        <div class="queue-panel-header">
+            <div class="select-all-checkbox" id="queue-select-all" onclick="toggleQueueSelectAll()" style="margin-right:4px;"></div>
+            <span class="queue-panel-title">📋 字幕生成队列</span>
+            <span class="queue-panel-count" id="queue-count">0</span>
+            <div class="queue-panel-actions">
+                <button class="btn btn-small" id="queue-pause-btn" onclick="togglePause()" style="background:#f0ad4e;color:#fff;">⏸ 暂停</button>
+                <button class="btn btn-small btn-danger" id="queue-batch-remove" onclick="batchRemoveQueue()" style="display:none;">移除选中</button>
+                <button class="btn btn-small" onclick="clearCompletedQueue()" style="background:#333;color:#ccc;">清除已完成</button>
+                <button class="btn btn-small" onclick="toggleQueuePanel()" style="background:#333;color:#ccc;">✕</button>
+            </div>
+        </div>
+        <div class="queue-list" id="queue-list">
+            <div class="queue-empty">暂无任务</div>
+        </div>
+    </div>
+
+</body>
+</html>
+
+
+
